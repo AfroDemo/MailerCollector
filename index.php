@@ -1,37 +1,56 @@
 <?php
-$host = "localhost";
-$user = "root";
-$pass = "";
-$dbname = "email_collector";
+function getDbConnection()
+{
+    $host = "db";
+    $user = "root";
+    $pass = "rootpassword";
+    $dbname = "email_collector";
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+    $conn = new mysqli($host, $user, $pass, $dbname);
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = filter_var($_POST["email"], FILTER_SANITIZE_EMAIL);
-
-    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $stmt = $conn->prepare("INSERT INTO emails (email) VALUES (?)");
-        $stmt->bind_param("s", $email);
-
-        if ($stmt->execute()) {
-            echo "Email saved successfully!";
-        } else {
-            echo "Error: " . $conn->error;
-        }
-    } else {
-        echo "Invalid email address!";
+    if ($conn->connect_error) {
+        error_log("Connection failed: " . $conn->connect_error);
+        throw new Exception("Database connection failed. Please try again later.");
     }
+
+    return $conn;
+}
+
+try {
+    $conn = getDbConnection();
+
+    // Handle form submission
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $email = filter_var($_POST["email"], FILTER_SANITIZE_EMAIL);
+
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $stmt = $conn->prepare("INSERT INTO emails (email) VALUES (?)");
+            $stmt->bind_param("s", $email);
+
+            if ($stmt->execute()) {
+                $message = "Email saved successfully!";
+            } else {
+                $message = "Error: " . $conn->error;
+            }
+        } else {
+            $message = "Invalid email address!";
+        }
+    }
+} catch (Exception $e) {
+    $message = $e->getMessage();
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Collection</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <h2>Welcome to My Service</h2>
@@ -42,4 +61,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </div>
 </body>
+
 </html>
